@@ -1088,7 +1088,11 @@ def build_lstm_op(node: Any, ctx: Any) -> None:
         ),
         fallback=1,
     )
-    if _build_static_forward_lstm_with_explicit_state(
+    # N2G: unroll an LSTM with computed initial h0/c0 only when it returns its
+    # final state (Y_h/Y_c), which the fused op cannot provide correctly.
+    # Otherwise emit a fused UNIDIRECTIONAL_SEQUENCE_LSTM fed by the computed
+    # states, keeping the graph small and static.
+    if (y_h_name != "" or y_c_name != "") and _build_static_forward_lstm_with_explicit_state(
         node=node,
         ctx=ctx,
         original_inputs=original_inputs,
